@@ -4,6 +4,16 @@ OpenDoc is a free, open-source, local-first Android utility for everyday documen
 
 The Android app wraps the OpenDoc web/PWA interface in a native Android shell and adds system integration such as **Open with OpenDoc** and **Share**.
 
+## Download for Android
+
+**Latest release: OpenDoc v0.2.5**
+
+[Download OpenDoc v0.2.5 APK](https://github.com/chabykru-ux/OpenDoc-Android/releases/download/v0.2.5/OpenDoc-v0.2.5.apk)
+
+[View the latest release and release notes](https://github.com/chabykru-ux/OpenDoc-Android/releases/latest)
+
+Android may ask for permission to install applications from your browser or file manager when installing an APK outside Google Play.
+
 ## Current release
 
 **v0.2.5**  
@@ -46,7 +56,7 @@ Open the project in Android Studio and build the `app` module.
 
 ## Release APK
 
-Prebuilt signed APK files can be published separately under **GitHub Releases**. Signing keys are not included in this repository.
+The signed installation APK is available under **GitHub Releases**. Signing keys are not included in this repository.
 
 ## License
 

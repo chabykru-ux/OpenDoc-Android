@@ -20,6 +20,15 @@ Android may ask for permission to install applications from your browser or file
 Android package: `com.azimuth171.opendoc`  
 Minimum Android version: **Android 8.0 (API 26)**
 
+## Screenshots
+
+<p align="center">
+  <img src="WhatsApp%20Image%202026-10-06%20at%2017.13.01.jpeg" alt="OpenDoc home screen" width="220">
+  <img src="WhatsApp%20Image%202026-10-06%20at%2017.13.01%20(1).jpeg" alt="OpenDoc file and PDF tools" width="220">
+  <img src="WhatsApp%20Image%202026-10-06%20at%2017.13.01%20(2).jpeg" alt="OpenDoc document scanner" width="220">
+  <img src="WhatsApp%20Image%202026-10-06%20at%2017.13.01%20(3).jpeg" alt="OpenDoc new document editor" width="220">
+</p>
+
 ## Main features
 
 - Open and preview PDF files

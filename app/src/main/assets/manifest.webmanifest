@@ -1,0 +1,15 @@
+{
+  "id":"./",
+  "name":"OpenDoc",
+  "short_name":"OpenDoc",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#0b1220",
+  "theme_color":"#111827",
+  "description":"Free open-source local-first PDF, scanning and document conversion utility with English and Russian interfaces",
+  "icons":[
+    {"src":"icons/icon-192-v025.png","sizes":"192x192","type":"image/png","purpose":"any"},
+    {"src":"icons/icon-512-v025.png","sizes":"512x512","type":"image/png","purpose":"any"}
+  ]
+}

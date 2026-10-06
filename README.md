@@ -44,11 +44,9 @@ Native Android code provides:
 
 Open the project in Android Studio and build the `app` module.
 
-The release configuration intentionally keeps code shrinking/minification disabled because the tested signed release uses that configuration.
-
 ## Release APK
 
-Prebuilt signed APK files are published separately under **GitHub Releases**. Signing keys are not included in this repository.
+Prebuilt signed APK files can be published separately under **GitHub Releases**. Signing keys are not included in this repository.
 
 ## License
 

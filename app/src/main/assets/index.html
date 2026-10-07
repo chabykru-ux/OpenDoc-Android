@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="Free open-source local-first PDF, scan and document conversion utility">
+  <title>OpenDoc</title>
+  <link rel="manifest" href="manifest.webmanifest?v=0.2.5">
+  <link rel="icon" type="image/png" href="icons/icon-192-v025.png">
+  <link rel="apple-touch-icon" href="icons/icon-192-v025.png">
+  <link rel="stylesheet" href="styles.css?v=0.2.5">
+</head>
+
+<body>
+
+<header>
+  <div class="brand">
+    <img src="icons/icon-192-v025.png" alt="OpenDoc icon">
+    <div>
+      <b>OpenDoc</b>
+      <small>
+        <span data-i18n="brandTagline">Free • Open Source • Local First</span>
+        • v0.2.5
+      </small>
+    </div>
+  </div>
+
+  <nav>
+    <button data-act="install" id="installBtn" class="hidden" data-i18n="installApp">Install App</button>
+    <button data-act="language" data-i18n="language">Language</button>
+    <button data-act="help" data-i18n="help">Help</button>
+    <button data-act="about" data-i18n="aboutLicenses">About & Licenses</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- HOME -->
+  <section id="home" class="view active">
+
+    <h1 data-i18n="homeTitle">Documents without the nonsense.</h1>
+
+    <p class="lead" data-i18n="homeLead">
+      Open, scan, convert, preview, print and export everyday documents.
+    </p>
+
+    <div class="cards">
+
+      <button class="card" data-act="openPdf">
+        <b data-i18n="openPdf">Open PDF</b>
+        <span data-i18n="openPdfDesc">
+          View PDF pages, print one page or all pages, remove unwanted pages, and export PDF text.
+        </span>
+      </button>
+
+      <button class="card" data-act="convert">
+        <b data-i18n="convertToPdf">Convert to PDF</b>
+        <span data-i18n="convertDesc">
+          Open DOCX, legacy DOC (Word 97–2003) or TXT and save it as PDF.
+        </span>
+      </button>
+
+      <button class="card" data-act="scan">
+        <b data-i18n="scanDocument">Scan Document</b>
+        <span data-i18n="scanDesc">
+          Camera or image library → four-corner crop → perspective correction → A4 → PDF.
+        </span>
+      </button>
+
+      <button class="card" data-act="newDoc">
+        <b data-i18n="newDocument">New Document</b>
+        <span data-i18n="newDesc">
+          Type or paste text, then save as PDF, DOCX or TXT.
+        </span>
+      </button>
+
+    </div>
+
+    <div class="privacy" data-i18n="privacyHome">
+      🔒 Files are processed in your browser. This build does not upload your documents to an application server.
+    </div>
+
+  </section>
+
+
+  <!-- PDF -->
+  <section id="pdfView" class="view">
+
+    <div class="toolbar">
+
+      <button data-act="home" data-i18n="homeBack">
+        ← Home
+      </button>
+
+      <button data-act="pdfPrintPage" data-i18n="printPage">
+        Print Page
+      </button>
+
+      <button data-act="pdfPrintAll" data-i18n="printAll">
+        Print All
+      </button>
+
+      <button data-act="pdfDeletePage" data-i18n="deletePage">
+        Delete Page
+      </button>
+
+      <button class="primaryAction" data-act="pdfSave" data-i18n="savePdf">
+        Save PDF
+      </button>
+
+      <button data-act="pdfExport" data-i18n="export">
+        Export
+      </button>
+
+      <button data-act="pdfShare">
+        Share
+      </button>
+
+    </div>
+
+    <div class="workspace">
+
+      <aside>
+        <div class="asideTitle" data-i18n="pages">Pages</div>
+        <div id="pdfPages"></div>
+      </aside>
+
+      <article>
+
+        <div class="docbar">
+          <strong id="pdfTitle">PDF</strong>
+          <span id="pdfStatus" data-i18n="ready">Ready</span>
+        </div>
+
+        <div class="pageViewer">
+          <img id="pdfPageImage" alt="PDF page">
+        </div>
+
+      </article>
+
+    </div>
+
+  </section>
+
+
+  <!-- CONVERT -->
+  <section id="convertView" class="view">
+
+    <div class="toolbar">
+
+      <button data-act="home" data-i18n="homeBack">
+        ← Home
+      </button>
+
+      <button data-act="convertOpen" data-i18n="openFile">
+        Open File
+      </button>
+
+      <button data-act="convertPrintPage" data-i18n="printPage">
+        Print Page
+      </button>
+
+      <button data-act="convertPrintAll" data-i18n="printAll">
+        Print All
+      </button>
+
+      <button data-act="convertDeletePage" data-i18n="deletePage">
+        Delete Page
+      </button>
+
+      <button class="primaryAction" data-act="convertSavePdf" data-i18n="savePdf">
+        Save PDF
+      </button>
+
+      <button data-act="convertShare">
+        Share
+      </button>
+
+    </div>
+
+    <div class="workspace">
+
+      <aside>
+        <div class="asideTitle" data-i18n="pages">Pages</div>
+        <div id="convertPages"></div>
+      </aside>
+
+      <article>
+
+        <div class="docbar">
+          <strong id="convertTitle" data-i18n="convertToPdf">Convert to PDF</strong>
+          <span id="convertStatus" data-i18n="convertStatusInitial">
+            Open a DOCX, DOC or TXT file
+          </span>
+        </div>
+
+        <div id="convertPageBody" class="pageViewer">
+          <div class="emptyState" data-i18n="convertEmpty">
+            Open a supported file to preview it here.
+          </div>
+        </div>
+
+      </article>
+
+    </div>
+
+  </section>
+
+
+  <!-- SCAN -->
+  <section id="scanView" class="view">
+
+    <div class="toolbar">
+
+      <button data-act="home" data-i18n="homeBack">
+        ← Home
+      </button>
+
+      <button data-act="scanAdd" data-i18n="scanPage">
+        + Scan Page
+      </button>
+
+      <button data-act="scanPrintPage" data-i18n="printPage">
+        Print Page
+      </button>
+
+      <button data-act="scanPrintAll" data-i18n="printAll">
+        Print All
+      </button>
+
+      <button data-act="scanDeletePage" data-i18n="deletePage">
+        Delete Page
+      </button>
+
+      <button class="primaryAction" data-act="scanSavePdf" data-i18n="savePdf">
+        Save PDF
+      </button>
+
+      <button data-act="scanShare">
+        Share
+      </button>
+
+    </div>
+
+    <div class="workspace">
+
+      <aside>
+        <div class="asideTitle" data-i18n="pages">Pages</div>
+        <div id="scanPages"></div>
+      </aside>
+
+      <article>
+
+        <div class="docbar">
+          <input
+                  id="scanTitle"
+                  value="Scanned document"
+                  aria-label="Document title">
+
+          <span id="scanStatus" data-i18n="scanStatusInitial">
+            Add a scan page
+          </span>
+        </div>
+
+        <div id="scanStored" class="pageViewer">
+          <div class="emptyState" data-i18n-html="scanEmpty">
+            Use <b>+ Scan Page</b> to photograph a page or import an image.
+          </div>
+        </div>
+
+        <div id="scanEditor" class="scanEditor hidden">
+
+          <div class="scanStage" id="scanStage">
+
+            <img id="scanImage" alt="Document image">
+
+            <svg
+                    class="cropOverlay"
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                    aria-hidden="true">
+
+              <path id="cropShade" fill-rule="evenodd"></path>
+
+              <polygon
+                      id="cropPolygon"
+                      points="6,6 94,6 94,94 6,94">
+              </polygon>
+
+            </svg>
+
+            <button class="cropHandle" data-c="tl" aria-label="Top left crop corner"></button>
+            <button class="cropHandle" data-c="tr" aria-label="Top right crop corner"></button>
+            <button class="cropHandle" data-c="br" aria-label="Bottom right crop corner"></button>
+            <button class="cropHandle" data-c="bl" aria-label="Bottom left crop corner"></button>
+
+          </div>
+
+          <div class="cropHelp" data-i18n-html="cropHelp">
+            <b>Blue frame = final paper.</b>
+            Drag the four corners to the real paper edges.
+            The dark area will be removed.
+          </div>
+
+          <div class="scanActions">
+
+            <button data-act="scanRotate" data-i18n="rotate90">
+              Rotate 90°
+            </button>
+
+            <button data-act="scanResetCrop" data-i18n="resetFrame">
+              Reset Frame
+            </button>
+
+            <button data-act="scanOriginal" data-i18n="originalPhoto">
+              Original Photo
+            </button>
+
+            <button class="primaryAction" data-act="scanUseA4" data-i18n="cropUseA4">
+              Crop & Use A4
+            </button>
+
+            <button data-act="scanCancelEdit" data-i18n="cancel">
+              Cancel
+            </button>
+
+          </div>
+
+        </div>
+
+      </article>
+
+    </div>
+
+  </section>
+
+
+  <!-- NEW DOCUMENT -->
+  <section id="newView" class="view">
+
+    <div class="toolbar">
+
+      <button data-act="home" data-i18n="homeBack">
+        ← Home
+      </button>
+
+      <button data-act="newAddPage" data-i18n="addPage">
+        + Page
+      </button>
+
+      <button data-act="newPrintPage" data-i18n="printPage">
+        Print Page
+      </button>
+
+      <button data-act="newPrintAll" data-i18n="printAll">
+        Print All
+      </button>
+
+      <button data-act="newDeletePage" data-i18n="deletePage">
+        Delete Page
+      </button>
+
+      <button class="primaryAction" data-act="newSaveAs" data-i18n="saveAs">
+        Save As
+      </button>
+
+      <button data-act="newShare">
+        Share
+      </button>
+
+    </div>
+
+    <div class="workspace">
+
+      <aside>
+        <div class="asideTitle" data-i18n="pages">
+          Pages
+        </div>
+
+        <div id="newPages"></div>
+      </aside>
+
+      <article>
+
+        <div class="docbar">
+
+          <input
+                  id="newTitle"
+                  value="New document"
+                  aria-label="Document title">
+
+          <span id="newStatus" data-i18n="ready">
+            Ready
+          </span>
+
+        </div>
+
+        <textarea
+                id="newText"
+                spellcheck="true"
+                placeholder="Type or paste text here…"
+                data-i18n-placeholder="newPlaceholder"></textarea>
+
+      </article>
+
+    </div>
+
+  </section>
+
+</main>
+
+
+<div id="printRoot" aria-hidden="true"></div>
+
+<div
+        id="docxRenderHost"
+        class="offscreenHost"
+        aria-hidden="true">
+</div>
+
+
+<input
+        id="pdfInput"
+        type="file"
+        accept="application/pdf"
+        hidden>
+
+<input
+        id="convertInput"
+        type="file"
+        accept=".txt,text/plain,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.doc,application/msword"
+        hidden>
+
+<input
+        id="imageInput"
+        type="file"
+        accept="image/*"
+        hidden>
+
+<input
+        id="cameraInput"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden>
+
+
+<dialog id="languageDialog">
+
+  <h2 data-i18n="language">
+    Language
+  </h2>
+
+  <p data-i18n="chooseLanguage">
+    Choose the interface language.
+  </p>
+
+  <div class="dialogBtns">
+
+    <button data-act="langEn">
+      English
+    </button>
+
+    <button data-act="langRu">
+      Русский
+    </button>
+
+    <button data-act="closeLanguage" data-i18n="cancel">
+      Cancel
+    </button>
+
+  </div>
+
+</dialog>
+
+
+<dialog id="scanChoice">
+
+  <h2 data-i18n="scanDocument">
+    Scan Document
+  </h2>
+
+  <p data-i18n="chooseImageSource">
+    Choose an image source.
+  </p>
+
+  <div class="dialogBtns">
+
+    <button data-act="scanCamera" data-i18n="useCamera">
+      Use Camera
+    </button>
+
+    <button data-act="scanGallery" data-i18n="importImage">
+      Import Image
+    </button>
+
+    <button data-act="closeScanChoice" data-i18n="cancel">
+      Cancel
+    </button>
+
+  </div>
+
+</dialog>
+
+
+<dialog id="pdfExportDialog">
+
+  <h2 data-i18n="exportPdf">
+    Export PDF
+  </h2>
+
+  <p data-i18n="exportPdfDesc">
+    Export the currently kept pages.
+    Text-based PDF pages are extracted directly.
+    Image-only pages are OCR'd when needed.
+  </p>
+
+  <label class="fieldLabel">
+
+    <span data-i18n="ocrLanguage">
+      OCR language for image-only pages
+    </span>
+
+    <select id="ocrLang">
+
+      <option value="eng" data-i18n="langEnglish">
+        English
+      </option>
+
+      <option value="rus" data-i18n="langRussian">
+        Russian
+      </option>
+
+      <option value="heb" data-i18n="langHebrew">
+        Hebrew
+      </option>
+
+      <option value="eng+rus" data-i18n="langEnglishRussian">
+        English + Russian
+      </option>
+
+      <option value="eng+heb" data-i18n="langEnglishHebrew">
+        English + Hebrew
+      </option>
+
+    </select>
+
+  </label>
+
+  <div class="dialogBtns">
+
+    <button data-act="pdfExportTxt" data-i18n="saveTxt">
+      Save TXT
+    </button>
+
+    <button data-act="pdfExportDocx" data-i18n="saveDocx">
+      Save DOCX
+    </button>
+
+    <button data-act="closePdfExport" data-i18n="cancel">
+      Cancel
+    </button>
+
+  </div>
+
+</dialog>
+
+
+<dialog id="newSaveDialog">
+
+  <h2 data-i18n="saveNewAs">
+    Save New Document As
+  </h2>
+
+  <div class="dialogBtns">
+
+    <button data-act="newSavePdf">
+      PDF
+    </button>
+
+    <button data-act="newSaveDocx">
+      DOCX
+    </button>
+
+    <button data-act="newSaveTxt">
+      TXT
+    </button>
+
+    <button data-act="closeNewSave" data-i18n="cancel">
+      Cancel
+    </button>
+
+  </div>
+
+</dialog>
+
+
+<!-- Share format selector for New Document -->
+
+<dialog id="newShareDialog">
+
+  <h2>
+    Share New Document As
+  </h2>
+
+  <div class="dialogBtns">
+
+    <button data-act="newSharePdf">
+      PDF
+    </button>
+
+    <button data-act="newShareDocx">
+      DOCX
+    </button>
+
+    <button data-act="newShareTxt">
+      TXT
+    </button>
+
+    <button data-act="closeNewShare" data-i18n="cancel">
+      Cancel
+    </button>
+
+  </div>
+
+</dialog>
+
+
+<dialog id="info">
+
+  <div id="infoBody"></div>
+
+  <button data-act="closeInfo" data-i18n="close">
+    Close
+  </button>
+
+</dialog>
+
+
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/gh/Alpaq92/JSDoc@main/src/docToText.js"></script>
+
+<script type="module" src="app.js?v=0.2.5"></script>
+
+</body>
+</html>

@@ -317,6 +317,10 @@ class MainActivity : AppCompatActivity() {
                         lowerName.endsWith(".pdf") ->
                     "pdfInput"
 
+                lowerName.endsWith(".xlsx") ||
+                        mimeType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ->
+                    "xlsxInput"
+
                 mimeType.startsWith("image/") ->
                     "imageInput"
 

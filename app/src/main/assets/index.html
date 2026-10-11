@@ -53,6 +53,10 @@
           View PDF pages, print one page or all pages, remove unwanted pages, and export PDF text.
         </span>
       </button>
+      <button class="card" data-act="openXlsx">
+        <b>Open Excel</b>
+        <span>View XLSX files and worksheets.</span>
+      </button>
 
       <button class="card" data-act="convert">
         <b data-i18n="convertToPdf">Convert to PDF</b>
@@ -81,6 +85,35 @@
       🔒 Files are processed in your browser. This build does not upload your documents to an application server.
     </div>
 
+  </section>
+
+  <!-- XLSX viewer -->
+  <section id="xlsxView" class="view">
+    <div class="toolbar">
+      <button data-act="home" data-i18n="homeBack">
+        ← Home
+      </button>
+
+      <button data-act="xlsxPrint">
+        Print
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <select id="xlsxSheetSelect"
+                aria-label="Excel worksheet">
+        </select>
+
+        <button data-act="xlsxFullscreen">
+          Fullscreen
+        </button>
+      </div>
+
+      <div id="xlsxTableHost"
+           class="xlsxTableHost">
+      </div>
+    </div>
   </section>
 
 
@@ -425,6 +458,11 @@
         type="file"
         accept="application/pdf"
         hidden>
+<input
+        id="xlsxInput"
+        type="file"
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        hidden>
 
 <input
         id="convertInput"
@@ -636,7 +674,32 @@
   </button>
 
 </dialog>
+<!-- OpenXL fullscreen viewer -->
+<div id="xlsxFullscreenOverlay" class="xlsxFullscreenOverlay hidden" role="dialog" aria-label="Excel fullscreen viewer">
+  <div class="xlsxFullscreenBar">
+    <select id="xlsxFullscreenSheet" aria-label="Excel worksheet"></select>
+    <button type="button" id="xlsxFullscreenClose">✕ Close</button>
+  </div>
+  <div id="xlsxFullscreenBody" class="xlsxFullscreenBody"></div>
+</div>
 
+<!-- OpenDoc - Fullscreen PDF viewer -->
+<div id="pdfFullscreen" class="pdfFullscreen hidden">
+  <div class="pdfFullscreenToolbar">
+    <span id="pdfFullscreenTitle">PDF</span>
+    <button type="button" id="pdfFullscreenClose">
+      ✕ Закрыть
+    </button>
+  </div>
+
+  <div class="pdfFullscreenBody" id="pdfFullscreenBody">
+    <img
+            id="pdfFullscreenImage"
+            alt="PDF page"
+            draggable="false"
+    >
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
@@ -650,7 +713,9 @@
 
 <script src="https://cdn.jsdelivr.net/gh/Alpaq92/JSDoc@main/src/docToText.js"></script>
 
-<script type="module" src="app.js?v=0.2.5"></script>
+<script src="vendor/exceljs.min.js"></script>
+
+<script type="module" src="app.js?v=0.2.6"></script>
 
 </body>
 </html>

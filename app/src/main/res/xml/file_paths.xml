@@ -2,8 +2,14 @@
 
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Existing document sharing -->
     <cache-path
         name="shared_files"
         path="shared/" />
+
+    <!-- Temporary photos captured by Android camera -->
+    <cache-path
+        name="camera_photos"
+        path="camera/" />
 
 </paths>

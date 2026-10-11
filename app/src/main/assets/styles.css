@@ -79,3 +79,156 @@
 /* v0.2.5 — installed PWA: prevent accidental pull-to-refresh while preserving normal scrolling. */
 html,body{overscroll-behavior-y:none;}
 main,.pageViewer,textarea,aside,.scanEditor{overscroll-behavior:contain;}
+
+/* OpenDoc - Fullscreen PDF viewer */
+
+.pdfFullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #111827;
+  display: flex;
+  flex-direction: column;
+}
+
+.pdfFullscreen.hidden {
+  display: none;
+}
+
+.pdfFullscreenToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #1f2937;
+  color: white;
+  flex-shrink: 0;
+}
+
+.pdfFullscreenToolbar button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #374151;
+  color: white;
+  border: 1px solid #4b5563;
+  cursor: pointer;
+}
+
+.pdfFullscreenBody {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+.pdfFullscreenBody img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transform-origin: center center;
+  user-select: none;
+  -webkit-user-drag: none;
+  touch-action: none;
+}
+
+/* OpenDoc XLSX viewer v0.2.6 */
+
+#xlsxView .card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 12px;
+    overflow: hidden;
+}
+
+#xlsxView .row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+#xlsxSheetSelect {
+    max-width: 100%;
+    min-width: 110px;
+    padding: 9px;
+    background: #1f2937;
+    color: #ffffff;
+    border: 1px solid #475569;
+    border-radius: 8px;
+}
+
+.xlsxTableHost {
+    width: 100%;
+    height: calc(100dvh - 290px);
+    min-height: 300px;
+    overflow: auto;
+    background: #ffffff;
+    color: #111827;
+    border-radius: 6px;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.xlsxTable {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: auto;
+    background: #ffffff;
+    color: #111827;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+}
+
+.xlsxTable td {
+    min-width: 130px;
+    max-width: 320px;
+    padding: 9px 12px;
+    border-right: 1px solid #d1d5db;
+    border-bottom: 1px solid #d1d5db;
+    vertical-align: top;
+    white-space: pre-wrap;
+    overflow-wrap: normal;
+    word-break: normal;
+    unicode-bidi: plaintext;
+    text-align: start;
+    line-height: 1.4;
+}
+
+.xlsxTable tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+@media (max-width: 720px) {
+    #xlsxView .card {
+        padding: 8px;
+    }
+
+    .xlsxTableHost {
+        height: calc(100dvh - 260px);
+        min-height: 320px;
+    }
+
+    .xlsxTable td {
+        min-width: 145px;
+        max-width: 260px;
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+}
+
+
+/* OpenXL fullscreen: sheet picker stays available, table scrolls in both directions. */
+body.xlsxFullscreenActive {overflow:hidden;}
+.xlsxFullscreenOverlay {position:fixed;inset:0;z-index:2000;background:#0b1220;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+.xlsxFullscreenBar {display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 10px;flex:none;border-bottom:1px solid #374151;}
+.xlsxFullscreenBar select {min-width:0;flex:1;max-width:70%;background:#1f2937;color:white;border:1px solid #475569;border-radius:8px;padding:9px;}
+.xlsxFullscreenBody {flex:1;min-height:0;overflow:hidden;padding:4px;}
+.xlsxFullscreenBody .xlsxTableHost {height:100%;min-height:0;border-radius:2px;touch-action:pan-x pan-y;}

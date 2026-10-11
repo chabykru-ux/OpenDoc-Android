@@ -7,6 +7,7 @@ import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.util.Base64
 import android.webkit.JavascriptInterface
@@ -16,6 +17,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
@@ -30,24 +32,31 @@ class MainActivity : AppCompatActivity() {
 
     private var pageReady = false
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
+    private var pendingCameraUri: Uri? = null
 
     private val fileChooserLauncher =
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
 
-            val files =
-                if (result.resultCode == Activity.RESULT_OK) {
+            val files = if (result.resultCode == Activity.RESULT_OK) {
+                val cameraUri = pendingCameraUri
+                if (cameraUri != null) {
+                    // Camera apps normally return no data when EXTRA_OUTPUT is used.
+                    arrayOf(cameraUri)
+                } else {
                     WebChromeClient.FileChooserParams.parseResult(
                         result.resultCode,
                         result.data
                     )
-                } else {
-                    null
                 }
+            } else {
+                null
+            }
 
             filePathCallback?.onReceiveValue(files)
             filePathCallback = null
+            pendingCameraUri = null
         }
 
     @SuppressLint(
@@ -60,6 +69,19 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         webView = findViewById(R.id.webView)
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                webView.evaluateJavascript(
+                    "window.closePdfFullscreenFromAndroid && window.closePdfFullscreenFromAndroid()"
+                ) { result ->
+                    if (result != "true") {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                        isEnabled = true
+                    }
+                }
+            }
+        })
 
         incomingDir = File(filesDir, "incoming").apply {
             mkdirs()
@@ -141,33 +163,49 @@ class MainActivity : AppCompatActivity() {
                     filePathCallback = newFilePathCallback
 
                     return try {
+                        val capturePhoto =
+                            fileChooserParams?.isCaptureEnabled == true &&
+                                    (fileChooserParams.acceptTypes.any {
+                                        it.startsWith("image/") || it == "image/*"
+                                    })
 
-                        val chooserIntent =
+                        val chooserIntent = if (capturePhoto) {
+                            val cameraDir = File(cacheDir, "camera").apply {
+                                mkdirs()
+                            }
+                            val photoFile = File.createTempFile(
+                                "opendoc_photo_", ".jpg", cameraDir
+                            )
+                            val photoUri = FileProvider.getUriForFile(
+                                this@MainActivity,
+                                "${packageName}.fileprovider",
+                                photoFile
+                            )
+                            pendingCameraUri = photoUri
+                            Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                                putExtra(MediaStore.EXTRA_OUTPUT, photoUri)
+                                clipData = ClipData.newRawUri("OpenDoc photo", photoUri)
+                                addFlags(
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                                )
+                            }
+                        } else {
+                            pendingCameraUri = null
                             fileChooserParams?.createIntent()
-                                ?: Intent(
-                                    Intent.ACTION_OPEN_DOCUMENT
-                                ).apply {
-
-                                    addCategory(
-                                        Intent.CATEGORY_OPENABLE
-                                    )
-
+                                ?: Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                                    addCategory(Intent.CATEGORY_OPENABLE)
                                     type = "*/*"
                                 }
+                        }
 
-                        fileChooserLauncher.launch(
-                            chooserIntent
-                        )
-
+                        fileChooserLauncher.launch(chooserIntent)
                         true
-
-                    } catch (
-                        e: ActivityNotFoundException
-                    ) {
-
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                         filePathCallback?.onReceiveValue(null)
                         filePathCallback = null
-
+                        pendingCameraUri = null
                         false
                     }
                 }

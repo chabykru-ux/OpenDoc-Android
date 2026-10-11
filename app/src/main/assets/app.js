@@ -1,4 +1,6 @@
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+let xlsxWorkbook = null;
+let xlsxCurrentSheet = 0;
 const VERSION='0.2.5';
 const I18N={
   en:{
@@ -125,7 +127,7 @@ function deleteSelected(state,render){if(!state.pages.length)return;if(state.pag
 function syncNew(){newState.title=$('#newTitle').value||t('newDocumentDefault');if(newState.pages[newState.current])newState.pages[newState.current].text=$('#newText').value}
 function syncScanTitle(){scanState.title=$('#scanTitle').value||t('scannedDocumentDefault')}
 
-const standaloneQuery=matchMedia('(display-mode: standalone)');
+const standaloneQuery=window.matchMedia('(display-mode: standalone)');
 function isStandaloneApp(){return standaloneQuery.matches||window.navigator.standalone===true}
 function updateInstallButton(){const b=$('#installBtn');if(!b)return;if(isStandaloneApp()||!deferredInstallPrompt)b.classList.add('hidden');else b.classList.remove('hidden')}
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;updateInstallButton()});
@@ -141,6 +143,139 @@ async function saveOpenedPdf(){if(!requirePage(pdfState.pages)||!window.PDFLib)r
 async function ensurePdfTexts(lang){let worker=null;try{for(let i=0;i<pdfState.pages.length;i++){const p=pdfState.pages[i];if((p.text||'').trim())continue;if(!window.Tesseract)throw new Error('OCR engine unavailable');if(!worker)worker=await Tesseract.createWorker(lang,1,{logger:m=>{if(m.progress)setText('#pdfStatus',`OCR ${i+1}/${pdfState.pages.length}: ${Math.round(m.progress*100)}%`)}});const r=await worker.recognize(p.image);p.text=(r.data.text||'').trim()}schedulePersist();return pdfState.pages.map(p=>p.text||'')}finally{try{await worker?.terminate()}catch(_){}}}
 async function exportPdfTxt(){closeDialog($('#pdfExportDialog'));try{setText('#pdfStatus','Preparing text export…');const texts=await ensurePdfTexts($('#ocrLang').value);const body=texts.map((t,i)=>`${i?`\n\n--- Page ${i+1} ---\n\n`:''}${t}`).join('');const name=`${safeName(pdfState.title)}_${stamp()}.txt`;download(new Blob([body],{type:'text/plain;charset=utf-8'}),name);setText('#pdfStatus',`Saved ${name}`)}catch(e){console.error(e);uiAlert('Text export failed. OCR may require an internet connection the first time.')}}
 async function exportPdfDocx(){closeDialog($('#pdfExportDialog'));try{setText('#pdfStatus','Preparing DOCX export…');const texts=await ensurePdfTexts($('#ocrLang').value);const mod=await import('https://cdn.jsdelivr.net/npm/docx@9.8.1/+esm');const children=[];texts.forEach((t,pi)=>{const lines=(t||'').replace(/\r/g,'').split('\n');if(!lines.length)lines.push('');lines.forEach((line,li)=>children.push(new mod.Paragraph({pageBreakBefore:pi>0&&li===0,children:[new mod.TextRun(line||' ')]}))) });const doc=new mod.Document({sections:[{children}]});const blob=await mod.Packer.toBlob(doc);const name=`${safeName(pdfState.title)}_${stamp()}.docx`;download(blob,name);setText('#pdfStatus',`Saved ${name}`)}catch(e){console.error(e);uiAlert('DOCX export failed.')}}
+
+
+function xlsxCellText(cell) {
+  const value = cell.value;
+  if (value == null) return '';
+  if (value instanceof Date) return value.toLocaleString();
+  if (typeof value === 'object') {
+    if (value.richText) return value.richText.map(part => part.text || '').join('');
+    if (value.text !== undefined) return String(value.text);
+    if (value.result !== undefined) return String(value.result ?? '');
+    if (value.formula) return '=' + value.formula;
+    if (value.error) return String(value.error);
+  }
+  return String(value);
+}
+
+function renderXlsxSheet() {
+  if (!xlsxWorkbook) return;
+  const sheet = xlsxWorkbook.worksheets[xlsxCurrentSheet];
+  if (!sheet) return;
+
+  const host = document.getElementById('xlsxTableHost');
+  host.replaceChildren();
+
+  const table = document.createElement('table');
+  table.className = 'xlsxTable';
+
+  const rowCount = sheet.rowCount;
+  const colCount = sheet.columnCount;
+
+  for (let r = 1; r <= rowCount; r++) {
+    const tr = document.createElement('tr');
+    const row = sheet.getRow(r);
+
+    for (let c = 1; c <= colCount; c++) {
+      const td = document.createElement('td');
+      td.textContent = xlsxCellText(row.getCell(c));
+      tr.appendChild(td);
+    }
+
+    table.appendChild(tr);
+  }
+
+  host.appendChild(table);
+}
+
+async function openXlsxFile(file) {
+  try {
+    if (!window.ExcelJS) throw new Error('ExcelJS library is unavailable');
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await file.arrayBuffer());
+
+    xlsxCloseFullscreen();
+    xlsxWorkbook = workbook;
+    xlsxCurrentSheet = 0;
+
+    const select = document.getElementById('xlsxSheetSelect');
+    select.replaceChildren();
+
+    workbook.worksheets.forEach((sheet, index) => {
+      const option = document.createElement('option');
+      option.value = String(index);
+      option.textContent = sheet.name;
+      select.appendChild(option);
+    });
+
+    show('xlsxView');
+    renderXlsxSheet();
+  } catch (error) {
+    console.error('XLSX open failed:', error);
+    alert('Cannot open XLSX: ' + error.message);
+  }
+}
+
+// Move the existing rendered table into fullscreen: no reload or lost worksheet.
+let xlsxFullOpen = false;
+let xlsxFullZoom = 1;
+const xlsxHost = document.getElementById('xlsxTableHost');
+const xlsxOriginalParent = xlsxHost.parentNode;
+const xlsxOriginalNext = xlsxHost.nextSibling;
+const xlsxFullOverlay = document.getElementById('xlsxFullscreenOverlay');
+const xlsxFullSheet = document.getElementById('xlsxFullscreenSheet');
+function xlsxSetZoom(value) {
+  xlsxFullZoom = Math.max(0.6, Math.min(3, value));
+  const table = xlsxHost.querySelector('.xlsxTable');
+  if (table) table.style.zoom = String(xlsxFullZoom);
+}
+function xlsxCloseFullscreen() {
+  if (!xlsxFullOpen) return;
+  xlsxFullOpen = false;
+  xlsxSetZoom(1);
+  xlsxOriginalParent.insertBefore(xlsxHost, xlsxOriginalNext);
+  xlsxFullOverlay.classList.add('hidden');
+  document.body.classList.remove('xlsxFullscreenActive');
+}
+function xlsxOpenFullscreen() {
+  if (!xlsxWorkbook || xlsxFullOpen) return;
+  xlsxFullOpen = true;
+  xlsxFullSheet.replaceChildren(...Array.from(document.getElementById('xlsxSheetSelect').options, option => option.cloneNode(true)));
+  xlsxFullSheet.value = String(xlsxCurrentSheet);
+  document.getElementById('xlsxFullscreenBody').appendChild(xlsxHost);
+  xlsxFullOverlay.classList.remove('hidden');
+  document.body.classList.add('xlsxFullscreenActive');
+  xlsxSetZoom(1);
+}
+document.getElementById('xlsxFullscreenClose').addEventListener('click', xlsxCloseFullscreen);
+xlsxFullSheet.addEventListener('change', event => {
+  xlsxCurrentSheet = Number(event.target.value);
+  document.getElementById('xlsxSheetSelect').value = event.target.value;
+  renderXlsxSheet();
+  xlsxSetZoom(xlsxFullZoom);
+});
+let xlsxPinchStart = null;
+xlsxHost.addEventListener('touchstart', e => {
+  if (!xlsxFullOpen || e.touches.length !== 2) return;
+  const [a,b] = e.touches;
+  xlsxPinchStart = {distance:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),zoom:xlsxFullZoom};
+}, {passive:true});
+xlsxHost.addEventListener('touchmove', e => {
+  if (!xlsxFullOpen || e.touches.length !== 2 || !xlsxPinchStart) return;
+  e.preventDefault();
+  const [a,b] = e.touches;
+  const distance = Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+  xlsxSetZoom(xlsxPinchStart.zoom * distance / Math.max(1,xlsxPinchStart.distance));
+}, {passive:false});
+xlsxHost.addEventListener('touchend', e => {if (e.touches.length < 2) xlsxPinchStart = null;}, {passive:true});
+document.addEventListener('keydown', e => {if(e.key === 'Escape' && xlsxFullOpen) xlsxCloseFullscreen();});
+
+document.getElementById('xlsxSheetSelect')?.addEventListener('change', event => {
+  xlsxCurrentSheet = Number(event.target.value);
+  renderXlsxSheet();
+});
 
 function renderConvert(){makePageButtons('#convertPages',convertState.pages,convertState.current,i=>{convertState.current=i;renderConvert()},(_,i)=>t('pageN',{n:i+1}));setText('#convertTitle',convertState.title||t('convertToPdf'));const body=$('#convertPageBody');body.innerHTML='';const p=convertState.pages[convertState.current];if(!p){body.innerHTML=`<div class="emptyState">${t('convertEmpty')}</div>`;schedulePersist();return}if(p.type==='image'){const im=document.createElement('img');im.src=p.image;body.appendChild(im)}else{const d=document.createElement('div');d.className='textPreview';d.textContent=p.text||'';body.appendChild(d)}schedulePersist()}
 function simpleTextPages(text){const raw=String(text||'').replace(/\r/g,'').split('\n'),out=[];let lines=[];const push=()=>{out.push({type:'text',text:lines.join('\n')});lines=[]};for(const line0 of raw){let line=line0;if(!line){lines.push('');if(lines.length>=44)push();continue}while(line.length>95){let cut=line.lastIndexOf(' ',95);if(cut<45)cut=95;lines.push(line.slice(0,cut));line=line.slice(cut).trimStart();if(lines.length>=44)push()}lines.push(line);if(lines.length>=44)push()}if(lines.length||!out.length)push();return out}
@@ -289,6 +424,7 @@ $('#scanTitle').addEventListener('input',()=>{scanState.title=$('#scanTitle').va
 $$('.cropHandle').forEach(h=>{h.addEventListener('pointerdown',e=>{if(!scanState.pending)return;dragCorner=h.dataset.c;h.setPointerCapture?.(e.pointerId);e.preventDefault()});h.addEventListener('pointermove',e=>{if(!dragCorner||!scanState.pending)return;const r=$('#scanStage').getBoundingClientRect();scanState.pending.crop[dragCorner]={x:clamp((e.clientX-r.left)/r.width,0,1),y:clamp((e.clientY-r.top)/r.height,0,1)};updateCropUI();e.preventDefault()});h.addEventListener('pointerup',()=>{dragCorner=null;schedulePersist()});h.addEventListener('pointercancel',()=>{dragCorner=null;schedulePersist()})});
 
 $('#pdfInput').addEventListener('change',e=>{const f=e.target.files?.[0];e.target.value='';if(f)openPdfFile(f)});
+$('#xlsxInput').addEventListener('change',async e=>{const f=e.target.files?.[0];e.target.value='';if(f)await openXlsxFile(f);});
 $('#convertInput').addEventListener('change',e=>{const f=e.target.files?.[0];e.target.value='';if(f)openConvertFile(f)});
 $('#imageInput').addEventListener('change',e=>{const f=e.target.files?.[0];e.target.value='';if(f)beginScanImage(f)});
 $('#cameraInput').addEventListener('change',e=>{const f=e.target.files?.[0];e.target.value='';if(f)beginScanImage(f)});
@@ -325,6 +461,8 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-act]
   if(a==='help')return help(); if(a==='about')return about(); if(a==='closeInfo')return closeDialog($('#info'));
   if(a==='home'){syncNew();syncScanTitle();show('home');return}
   if(a==='openPdf'){ $('#pdfInput').click();return }
+  if(a==='openXlsx'){  $('#xlsxInput').click();return }
+  if(a==='xlsxFullscreen'){xlsxOpenFullscreen();return}
   if(a==='convert'){show('convertView');renderConvert();return}
   if(a==='convertOpen'){ $('#convertInput').click();return }
   if(a==='scan'){show('scanView');renderScan();if(!scanState.pages.length)openDialog($('#scanChoice'));return}
@@ -374,6 +512,106 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-act]
 });
 
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=0.2.5').catch(console.warn));
-(async()=>{applyLanguage(currentLang,{persist:false});const restoredView=await restoreSavedWork();show(restoredView,{persist:false});persistenceReady=true;schedulePersist(0)})();
+(async()=>{applyLanguage(currentLang,{persist:false});const restoredView=await restoreSavedWork();show('home',{persist:false});persistenceReady=true;schedulePersist(0)})();
 window.addEventListener('pagehide',()=>{saveWorkNow()});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveWorkNow()});
+// OpenDoc - Fullscreen PDF viewer
+
+const pdfFullscreen = document.getElementById('pdfFullscreen');
+const pdfFullscreenImage = document.getElementById('pdfFullscreenImage');
+const pdfFullscreenClose = document.getElementById('pdfFullscreenClose');
+const pdfPageImage = document.getElementById('pdfPageImage');
+
+function openPdfFullscreen() {
+  if (!pdfPageImage || !pdfPageImage.src ||
+      !pdfPageImage.naturalWidth) return;
+      pdfScale = 1;
+      pdfOffsetX = 0;
+      pdfOffsetY = 0;
+      pdfStartDistance = 0;
+
+  pdfFullscreenImage.src = pdfPageImage.src;
+  pdfFullscreenImage.style.transform = 'none';
+  pdfFullscreen.classList.remove('hidden');
+}
+
+function closePdfFullscreen() {
+  pdfFullscreen.classList.add('hidden');
+  pdfFullscreenImage.style.transform = 'none';
+}
+window.closePdfFullscreenFromAndroid = function() {
+    if (pdfFullscreen.classList.contains('hidden')) {
+        return false;
+    }
+
+    closePdfFullscreen();
+    return true;
+};
+
+pdfPageImage?.addEventListener('click', openPdfFullscreen);
+pdfFullscreenClose?.addEventListener('click', closePdfFullscreen);
+// OpenDoc - PDF pinch zoom and pan
+
+const pdfZoomArea = document.getElementById('pdfFullscreenBody');
+
+let pdfScale = 1;
+let pdfOffsetX = 0;
+let pdfOffsetY = 0;
+let pdfStartDistance = 0;
+let pdfStartScale = 1;
+let pdfStartX = 0;
+let pdfStartY = 0;
+let pdfInitialX = 0;
+let pdfInitialY = 0;
+
+function updatePdfTransform() {
+  pdfFullscreenImage.style.transform =
+    `translate(${pdfOffsetX}px, ${pdfOffsetY}px) scale(${pdfScale})`;
+}
+
+function pdfTouchDistance(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.hypot(dx, dy);
+}
+
+pdfZoomArea.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    pdfStartDistance = pdfTouchDistance(e.touches);
+    pdfStartScale = pdfScale;
+  } else if (e.touches.length === 1) {
+    pdfStartX = e.touches[0].clientX;
+    pdfStartY = e.touches[0].clientY;
+    pdfInitialX = pdfOffsetX;
+    pdfInitialY = pdfOffsetY;
+  }
+}, { passive: false });
+
+pdfZoomArea.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+
+  if (e.touches.length === 2 && pdfStartDistance > 0) {
+    const distance = pdfTouchDistance(e.touches);
+    pdfScale = Math.max(1, Math.min(5,
+      pdfStartScale * distance / pdfStartDistance
+    ));
+    updatePdfTransform();
+  } else if (e.touches.length === 1 && pdfScale > 1) {
+    pdfOffsetX = pdfInitialX + e.touches[0].clientX - pdfStartX;
+    pdfOffsetY = pdfInitialY + e.touches[0].clientY - pdfStartY;
+    updatePdfTransform();
+  }
+}, { passive: false });
+
+pdfZoomArea.addEventListener('touchend', (e) => {
+  if (e.touches.length < 2) {
+    pdfStartDistance = 0;
+  }
+
+  if (e.touches.length === 1) {
+    pdfStartX = e.touches[0].clientX;
+    pdfStartY = e.touches[0].clientY;
+    pdfInitialX = pdfOffsetX;
+    pdfInitialY = pdfOffsetY;
+  }
+}, { passive: false });

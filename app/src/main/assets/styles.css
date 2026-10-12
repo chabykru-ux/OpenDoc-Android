@@ -177,29 +177,30 @@ main,.pageViewer,textarea,aside,.scanEditor{overscroll-behavior:contain;}
 
 .xlsxTable {
     width: max-content;
-    min-width: 100%;
+    min-width: 0;
     border-collapse: separate;
     border-spacing: 0;
-    table-layout: auto;
+    table-layout: fixed;
+    direction: inherit;
     background: #ffffff;
     color: #111827;
     font-family: Arial, sans-serif;
-    font-size: 14px;
+    font-size: 11px;
 }
 
 .xlsxTable td {
-    min-width: 130px;
-    max-width: 320px;
-    padding: 9px 12px;
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: none;
+    padding: 3px 4px;
     border-right: 1px solid #d1d5db;
     border-bottom: 1px solid #d1d5db;
     vertical-align: top;
     white-space: pre-wrap;
-    overflow-wrap: normal;
-    word-break: normal;
+    overflow-wrap: anywhere;
     unicode-bidi: plaintext;
     text-align: start;
-    line-height: 1.4;
+    line-height: 1.2;
 }
 
 .xlsxTable tr:nth-child(even) {
@@ -216,12 +217,7 @@ main,.pageViewer,textarea,aside,.scanEditor{overscroll-behavior:contain;}
         min-height: 320px;
     }
 
-    .xlsxTable td {
-        min-width: 145px;
-        max-width: 260px;
-        padding: 8px 10px;
-        font-size: 13px;
-    }
+    .xlsxTable td { font-size: 11px; }
 }
 
 

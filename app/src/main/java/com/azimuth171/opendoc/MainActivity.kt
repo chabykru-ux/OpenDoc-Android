@@ -72,7 +72,7 @@ class MainActivity : AppCompatActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 webView.evaluateJavascript(
-                    "window.closePdfFullscreenFromAndroid && window.closePdfFullscreenFromAndroid()"
+                    "window.openDocHandleSystemBack ? window.openDocHandleSystemBack() : false"
                 ) { result ->
                     if (result != "true") {
                         isEnabled = false

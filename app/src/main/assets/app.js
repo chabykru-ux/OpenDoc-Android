@@ -111,7 +111,31 @@ async function restoreSavedWork(){const s=await loadSavedWork();if(!s||s.version
   if(scanState.pending){$('#scanStored').classList.add('hidden');$('#scanEditor').classList.remove('hidden');setScanEditorImage(scanState.pending.working||scanState.pending.original)}else{$('#scanEditor').classList.add('hidden');$('#scanStored').classList.remove('hidden')}
   return ['home','pdfView','convertView','scanView','newView'].includes(s.currentView)?s.currentView:'home'}
 
-function show(id,{persist=true}={}){$$('.view').forEach(v=>v.classList.remove('active'));$('#'+id).classList.add('active');currentView=id;scrollTo({top:0,behavior:'instant'});if(persist)schedulePersist()}
+const openDocViewHistory = [];
+function show(id,{persist=true,recordHistory=true}={}){
+  if(recordHistory && currentView && currentView!==id){
+    if(id==='home') openDocViewHistory.length=0;
+    else openDocViewHistory.push(currentView);
+  }
+  $$('.view').forEach(v=>v.classList.remove('active'));
+  $('#'+id).classList.add('active');currentView=id;
+  scrollTo({top:0,behavior:'instant'});if(persist)schedulePersist();
+}
+// Called by the Android system Back gesture/button. Return true only if consumed.
+window.openDocHandleSystemBack = function(){
+  if(typeof xlsxFullOpen!=='undefined' && xlsxFullOpen){xlsxCloseFullscreen();return true;}
+  if(typeof pdfFullscreen!=='undefined' && pdfFullscreen && !pdfFullscreen.classList.contains('hidden')){
+    closePdfFullscreen();return true;
+  }
+  const dialogs=Array.from(document.querySelectorAll('dialog')).filter(d=>d.open||d.classList.contains('dialogFallbackOpen'));
+  if(dialogs.length){closeDialog(dialogs[dialogs.length-1]);return true;}
+  if(currentView && currentView!=='home'){
+    let previous=openDocViewHistory.pop()||'home';
+    if(!document.getElementById(previous))previous='home';
+    show(previous,{recordHistory:false});return true;
+  }
+  return false;
+};
 function safeName(s){return String(s||'document').normalize('NFKC').trim().replace(/[\\/:*?"<>|\x00-\x1F]+/g,'_').replace(/\s+/g,'_').replace(/^_+|_+$/g,'')||'document'}
 function stamp(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`}
 function download(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000)}
@@ -166,27 +190,47 @@ function renderXlsxSheet() {
 
   const host = document.getElementById('xlsxTableHost');
   host.replaceChildren();
-
   const table = document.createElement('table');
   table.className = 'xlsxTable';
-
+  // Respect the worksheet's saved display direction, not the phone locale.
+  // RTL places column A at the right edge; cell text direction stays independent.
+  table.dir = sheet.views?.[0]?.rightToLeft ? 'rtl' : 'ltr';
   const rowCount = sheet.rowCount;
   const colCount = sheet.columnCount;
+  const widths = [];
+  const colgroup = document.createElement('colgroup');
+  for (let c = 1; c <= colCount; c++) {
+    const excelWidth = Number(sheet.getColumn(c).width);
+    // Excel column widths are approximately character units; 7 px per unit.
+    const px = Math.max(28, Math.min(600, Math.round((Number.isFinite(excelWidth) && excelWidth > 0 ? excelWidth : 8.43) * 7 + 5)));
+    widths.push(px);
+    const col = document.createElement('col');
+    col.style.width = px + 'px';
+    colgroup.appendChild(col);
+  }
+  table.appendChild(colgroup);
+  table.style.width = widths.reduce((a, b) => a + b, 0) + 'px';
 
+  const tbody = document.createElement('tbody');
   for (let r = 1; r <= rowCount; r++) {
     const tr = document.createElement('tr');
     const row = sheet.getRow(r);
-
     for (let c = 1; c <= colCount; c++) {
+      const cell = row.getCell(c);
       const td = document.createElement('td');
-      td.textContent = xlsxCellText(row.getCell(c));
+      td.textContent = xlsxCellText(cell);
+      td.dir = 'auto';
+      const alignment = cell.alignment;
+      if (alignment?.horizontal === 'right') td.style.textAlign = 'right';
+      else if (alignment?.horizontal === 'center') td.style.textAlign = 'center';
+      else if (alignment?.horizontal === 'left') td.style.textAlign = 'left';
       tr.appendChild(td);
     }
-
-    table.appendChild(tr);
+    tbody.appendChild(tr);
   }
-
+  table.appendChild(tbody);
   host.appendChild(table);
+  xlsxFitToWidth();
 }
 
 async function openXlsxFile(file) {
@@ -227,15 +271,25 @@ const xlsxOriginalNext = xlsxHost.nextSibling;
 const xlsxFullOverlay = document.getElementById('xlsxFullscreenOverlay');
 const xlsxFullSheet = document.getElementById('xlsxFullscreenSheet');
 function xlsxSetZoom(value) {
-  xlsxFullZoom = Math.max(0.6, Math.min(3, value));
+  xlsxFullZoom = Math.max(0.08, Math.min(4, value));
   const table = xlsxHost.querySelector('.xlsxTable');
   if (table) table.style.zoom = String(xlsxFullZoom);
+}
+function xlsxFitToWidth() {
+  const table = xlsxHost.querySelector('.xlsxTable');
+  if (!table) return;
+  const naturalWidth = Number.parseFloat(table.style.width) || table.scrollWidth;
+  const availableWidth = xlsxHost.clientWidth - 8;
+  if (naturalWidth > 0 && availableWidth > 0) {
+    xlsxSetZoom(Math.min(1, availableWidth / naturalWidth));
+    xlsxHost.scrollLeft = 0;
+  }
 }
 function xlsxCloseFullscreen() {
   if (!xlsxFullOpen) return;
   xlsxFullOpen = false;
-  xlsxSetZoom(1);
   xlsxOriginalParent.insertBefore(xlsxHost, xlsxOriginalNext);
+  xlsxFitToWidth();
   xlsxFullOverlay.classList.add('hidden');
   document.body.classList.remove('xlsxFullscreenActive');
 }
@@ -247,14 +301,14 @@ function xlsxOpenFullscreen() {
   document.getElementById('xlsxFullscreenBody').appendChild(xlsxHost);
   xlsxFullOverlay.classList.remove('hidden');
   document.body.classList.add('xlsxFullscreenActive');
-  xlsxSetZoom(1);
+  xlsxFitToWidth();
 }
 document.getElementById('xlsxFullscreenClose').addEventListener('click', xlsxCloseFullscreen);
 xlsxFullSheet.addEventListener('change', event => {
   xlsxCurrentSheet = Number(event.target.value);
   document.getElementById('xlsxSheetSelect').value = event.target.value;
   renderXlsxSheet();
-  xlsxSetZoom(xlsxFullZoom);
+  xlsxFitToWidth();
 });
 let xlsxPinchStart = null;
 xlsxHost.addEventListener('touchstart', e => {
